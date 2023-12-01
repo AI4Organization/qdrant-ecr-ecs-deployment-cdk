@@ -1,3 +1,4 @@
+import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ecrDeploy from 'cdk-ecr-deployment';
@@ -8,14 +9,21 @@ export class QdrantDockerImageEcrDeploymentCdkStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: QdrantDockerImageEcrDeploymentCdkStackProps) {
         super(scope, id, props);
 
-        const ecrRepository = new ecr.Repository(this, `${props.appName}-QdrantDockerImageEcrRepository`, {
-            repositoryName: props?.repositoryName ?? 'qdrant-docker-image-ecr-deployment-cdk',
+        const kmsKey = new kms.Key(this, `${props.appName}-ECRRepositoryKmsKey`, {
+            enableKeyRotation: true,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
-            encryption: ecr.RepositoryEncryption.AES_256
+            enabled: true,
         });
 
-        ecrRepository.addLifecycleRule({ maxImageAge: cdk.Duration.days(7), rulePriority: 1, tagStatus: ecr.TagStatus.UNTAGGED }); // delete images older than 7 days
-        ecrRepository.addLifecycleRule({ maxImageCount: 4, rulePriority: 2, tagStatus: ecr.TagStatus.ANY }); // keep last 4 images
+        const ecrRepository = new ecr.Repository(this, `${props.appName}-QdrantDockerImageEcrRepository`, {
+            repositoryName: props?.repositoryName ?? 'qdrant-docker-image-ecr-kms-deployment-cdk',
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            encryption: ecr.RepositoryEncryption.KMS,
+            encryptionKey: kmsKey,
+        });
+
+        ecrRepository.addLifecycleRule({ maxImageCount: 4, rulePriority: 1 }); // keep last 4 images
+        ecrRepository.addLifecycleRule({ maxImageAge: cdk.Duration.days(7), rulePriority: 2 }); // delete images older than 7 days
 
         // Copy from docker registry to ECR.
         new ecrDeploy.ECRDeployment(this, `${props.appName}-QdrantDockerImageEcrDeployment`, {
