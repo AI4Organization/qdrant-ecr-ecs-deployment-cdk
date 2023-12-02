@@ -4,4 +4,5 @@ export interface QdrantDockerImageEcrDeploymentCdkStackProps extends cdk.StackPr
   readonly repositoryName: string;
   readonly appName: string;
   imageVersion?: string;
+  environment?: string;
 }
