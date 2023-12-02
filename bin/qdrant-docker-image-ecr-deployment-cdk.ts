@@ -28,6 +28,7 @@ for (const cdkRegion of cdkRegions) {
             repositoryName: `${process.env.ECR_REPOSITORY_NAME}-${environment}` ?? 'qdrant-docker-image-ecr-deployment-cdk',
             appName: process.env.APP_NAME ?? 'qdrant-vectordatabase',
             imageVersion: process.env.IMAGE_VERSION ?? DEFAULT_IMAGE_VERSION,
+            environment: environment
         });
     }
 }
