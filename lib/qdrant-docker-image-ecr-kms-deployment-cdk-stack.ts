@@ -16,7 +16,7 @@ export class QdrantDockerImageEcrDeploymentCdkStack extends cdk.Stack {
         });
 
         const ecrRepository = new ecr.Repository(this, `${props.appName}-${props.environment}-DockerImageEcrRepository`, {
-            repositoryName: props?.repositoryName ?? 'qdrant-docker-image-ecr-kms-deployment-cdk',
+            repositoryName: props.repositoryName,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             encryption: ecr.RepositoryEncryption.KMS,
             encryptionKey: kmsKey,
