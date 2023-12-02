@@ -22,8 +22,8 @@ export class QdrantDockerImageEcrDeploymentCdkStack extends cdk.Stack {
             encryptionKey: kmsKey,
         });
 
-        ecrRepository.addLifecycleRule({ maxImageCount: 4, rulePriority: 1 }); // keep last 4 images
-        ecrRepository.addLifecycleRule({ maxImageAge: cdk.Duration.days(7), rulePriority: 2 }); // delete images older than 7 days
+        ecrRepository.addLifecycleRule({ maxImageAge: cdk.Duration.days(7), rulePriority: 1, tagStatus: ecr.TagStatus.UNTAGGED }); // delete images older than 7 days
+        ecrRepository.addLifecycleRule({ maxImageCount: 4, rulePriority: 2, tagStatus: ecr.TagStatus.ANY }); // keep last 4 images
 
         // Copy from docker registry to ECR.
         new ecrDeploy.ECRDeployment(this, `${props.appName}-QdrantDockerImageEcrDeployment`, {
