@@ -1,6 +1,6 @@
 {
   "name": "qdrant-docker-image-ecr-deployment-cdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "bin": {
     "qdrant-docker-image-ecr-deployment-cdk": "bin/qdrant-docker-image-ecr-deployment-cdk.js"
   },
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "aws-cdk-lib": "2.113.0",
-    "cdk-ecr-deployment": "^2.5.37",
+    "cdk-ecr-deployment": "^2.5.38",
     "constructs": "^10.3.0",
     "dotenv": "^16.3.1",
     "source-map-support": "^0.5.21"
