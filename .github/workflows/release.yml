@@ -108,6 +108,7 @@ jobs:
         continue-on-error: false
 
       - name: Deploy to AWS using CDK
+        if: github.event_name == 'push' || !(github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/stg' || github.ref == 'refs/heads/main')
         run: npx cdk deploy --require-approval never --all
         env:
           CDK_DEPLOY_REGIONS: ${{ secrets.CDK_DEPLOY_REGIONS }}
