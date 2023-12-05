@@ -1,0 +1,119 @@
+name: Deployment with AWS CLI & AWS CDK
+
+on:
+  push:
+    branches:
+      - main
+      - stg
+      - dev
+  pull_request:
+    branches:
+      - dev
+      - stg
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+      fail-fast: false # fail all builds if one fails
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Cache node modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.npm
+            **/node_modules
+          key: ${{ runner.os }}-node-deps-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-deps-
+
+      - name: Cache CDK CLI
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cdk
+            **/cdk.out
+          key: ${{ runner.os }}-node-cdk-${{ hashFiles('**/cdk.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-cdk-
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+        continue-on-error: false
+
+      - name: Check AWS CLI
+        run: |
+          if ! command -v aws &> /dev/null
+          then
+            echo "AWS CLI could not be found, installing..."
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install
+          else
+            echo "AWS CLI is installed"
+          fi
+        continue-on-error: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+        continue-on-error: false
+
+      - name: Install dependencies
+        run: npm ci
+        continue-on-error: false
+
+      - name: Set ENVIRONMENTS variable
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "ENVIRONMENTS=${{ secrets.ENVIRONMENTS_DEV }}" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/stg" ]]; then
+            echo "ENVIRONMENTS=${{ secrets.ENVIRONMENTS_STG }}" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENTS=${{ secrets.ENVIRONMENTS_MAIN }}" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENTS=${{ github.ref }}" >> $GITHUB_ENV
+          fi
+
+      - name: Run CDK synth
+        env:
+          CDK_DEPLOY_REGIONS: ${{ secrets.CDK_DEPLOY_REGIONS }}
+          ENVIRONMENTS: ${{ env.ENVIRONMENTS }}
+          ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
+          APP_NAME: ${{ secrets.APP_NAME }}
+          IMAGE_VERSION: ${{ secrets.IMAGE_VERSION }}
+        run: npx cdk synth
+        continue-on-error: false
+
+      - name: Run CDK Bootstrap
+        env:
+          CDK_DEPLOY_REGIONS: ${{ secrets.CDK_DEPLOY_REGIONS }}
+          ENVIRONMENTS: ${{ env.ENVIRONMENTS }}
+          ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
+          APP_NAME: ${{ secrets.APP_NAME }}
+          IMAGE_VERSION: ${{ secrets.IMAGE_VERSION }}
+        run: npx cdk bootstrap
+        continue-on-error: false
+
+      - name: Deploy to AWS using CDK
+        if: github.event_name == 'push' || !(github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/stg' || github.ref == 'refs/heads/main')
+        run: npx cdk deploy --require-approval never --all
+        env:
+          CDK_DEPLOY_REGIONS: ${{ secrets.CDK_DEPLOY_REGIONS }}
+          ENVIRONMENTS: ${{ env.ENVIRONMENTS }}
+          ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
+          APP_NAME: ${{ secrets.APP_NAME }}
+          IMAGE_VERSION: ${{ secrets.IMAGE_VERSION }}
+        continue-on-error: false
