@@ -23,12 +23,11 @@ const DEFAULT_IMAGE_VERSION = 'latest';
  * @returns void
  * */
 function checkEnvVariables(...args: string[]) {
-    args.forEach((arg) => {
-        if (!process.env[arg]) {
-            throw new Error(`Environment variable ${arg} is not set yet. Please set it in .env file.`);
-        }
-    });
-}
+    const missingVariables = args.filter(arg => !process.env[arg]);
+    if (missingVariables.length > 0) {
+        throw new Error(`The following environment variables are not set yet: ${missingVariables.join(', ')}. Please set them in .env file or pipeline environments.`);
+    }
+};
 
 // check if the environment variables are set
 checkEnvVariables('ECR_REPOSITORY_NAME', 'APP_NAME');
