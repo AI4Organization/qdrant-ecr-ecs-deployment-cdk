@@ -25,7 +25,7 @@ const DEFAULT_IMAGE_VERSION = 'latest';
 function checkEnvVariables(...args: string[]) {
     const missingVariables = args.filter(arg => !process.env[arg]);
     if (missingVariables.length > 0) {
-        throw new Error(`The following environment variables are not set yet: ${missingVariables}. Please set them in .env file or pipeline environments.`);
+        throw new Error(`The following environment variables are not set yet: ${missingVariables.join(', ')}. Please set them in .env file or pipeline environments.`);
     }
 };
 
