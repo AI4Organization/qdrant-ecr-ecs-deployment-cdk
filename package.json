@@ -1,6 +1,6 @@
 {
   "name": "qdrant-docker-image-ecr-deployment-cdk",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "bin": {
     "qdrant-docker-image-ecr-deployment-cdk": "bin/qdrant-docker-image-ecr-deployment-cdk.js"
   },
