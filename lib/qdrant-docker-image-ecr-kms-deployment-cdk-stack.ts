@@ -41,5 +41,11 @@ export class QdrantDockerImageEcrDeploymentCdkStack extends cdk.Stack {
             value: ecrRepository.repositoryArn,
             exportName: `${props.appName}-${props.environment}-ECRRepositoryArn`,
         });
+
+        // print out ecrRepository repository name
+        new cdk.CfnOutput(this, `${props.appName}-${props.environment}-ECRRepositoryName`, {
+            value: ecrRepository.repositoryName,
+            exportName: `${props.appName}-${props.environment}-ECRRepositoryName`,
+        });
     }
 }
