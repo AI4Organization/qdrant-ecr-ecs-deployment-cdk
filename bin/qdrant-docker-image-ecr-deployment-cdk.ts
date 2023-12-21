@@ -14,7 +14,7 @@ const { CDK_DEFAULT_ACCOUNT: account, CDK_DEFAULT_REGION: region } = process.env
 const cdkRegions = process.env.CDK_DEPLOY_REGIONS?.split(',') ?? [region]; // Parsing comma separated list of regions
 const deployEnvironments = process.env.ENVIRONMENTS?.split(',') ?? ['dev']; // Parsing comma separated list of environments
 
-const DEFAULT_IMAGE_VERSION = 'latest';
+export const LATEST_IMAGE_VERSION = 'latest';
 
 /*
  * Check if the environment variables are set
@@ -35,7 +35,7 @@ checkEnvVariables('ECR_REPOSITORY_NAME', 'APP_NAME');
 const envTypes: IEnvTypes = {
     ECR_REPOSITORY_NAME: process.env.ECR_REPOSITORY_NAME ?? `qdrant-docker-image-erc-repository`,
     APP_NAME: process.env.APP_NAME ?? `qdrant-vectordatabase`,
-    IMAGE_VERSION: process.env.IMAGE_VERSION ?? DEFAULT_IMAGE_VERSION,
+    IMAGE_VERSION: process.env.IMAGE_VERSION ?? LATEST_IMAGE_VERSION,
 };
 
 for (const cdkRegion of cdkRegions) {
@@ -50,7 +50,7 @@ for (const cdkRegion of cdkRegions) {
             },
             repositoryName: `${envTypes.ECR_REPOSITORY_NAME}-${environment}`,
             appName: envTypes.APP_NAME,
-            imageVersion: envTypes.IMAGE_VERSION ?? DEFAULT_IMAGE_VERSION,
+            imageVersion: envTypes.IMAGE_VERSION ?? LATEST_IMAGE_VERSION,
             environment: environment
         });
     }
