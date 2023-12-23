@@ -12,7 +12,7 @@ export class QdrantDockerImageEcrDeploymentCdkStack extends cdk.Stack {
         const ecrRepository = new ecr.Repository(this, `${props.appName}-${props.environment}-DockerImageEcrRepository`, {
             repositoryName: props.repositoryName,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
-            autoDeleteImages: true,
+            emptyOnDelete: true,
             encryption: ecr.RepositoryEncryption.AES_256
         });
 
