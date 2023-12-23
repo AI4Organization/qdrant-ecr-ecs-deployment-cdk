@@ -5,6 +5,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as dotenv from 'dotenv';
 import { QdrantDockerImageEcrDeploymentCdkStack } from '../lib/qdrant-docker-image-ecr-deployment-cdk-stack';
 import { IEnvTypes } from '../process-env-typed';
+import { QdrantDockerImageEcsDeploymentCdkStack } from '../lib/qdrant-docker-image-ecs-deployment-cdk-stack';
 
 dotenv.config(); // Load environment variables from .env file
 const app = new cdk.App();
@@ -52,6 +53,21 @@ for (const cdkRegion of cdkRegions) {
             appName: envTypes.APP_NAME,
             imageVersion: envTypes.IMAGE_VERSION ?? LATEST_IMAGE_VERSION,
             environment: environment
+        });
+
+        new QdrantDockerImageEcsDeploymentCdkStack(app, `QdrantDockerImageEcsDeploymentCdkStack-${cdkRegion}-${environment}`, {
+            env: {
+                account,
+                region: cdkRegion,
+            },
+            tags: {
+                environment,
+            },
+            repositoryName: `${envTypes.ECR_REPOSITORY_NAME}-${environment}`,
+            appName: envTypes.APP_NAME,
+            imageVersion: envTypes.IMAGE_VERSION ?? LATEST_IMAGE_VERSION,
+            environment: environment,
+            platformString: `amd64`,
         });
     }
 }
