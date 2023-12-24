@@ -31,16 +31,22 @@ function checkEnvVariables(...args: string[]) {
 };
 
 // check if the environment variables are set
-checkEnvVariables('ECR_REPOSITORY_NAME', 'APP_NAME');
+checkEnvVariables('ECR_REPOSITORY_NAME', 'APP_NAME', 'PLATFORMS', 'APP_ROOT_FILE_PATH');
 
 const envTypes: IEnvTypes = {
     ECR_REPOSITORY_NAME: process.env.ECR_REPOSITORY_NAME ?? `qdrant-docker-image-erc-repository`,
     APP_NAME: process.env.APP_NAME ?? `qdrant-vectordatabase`,
     IMAGE_VERSION: process.env.IMAGE_VERSION ?? LATEST_IMAGE_VERSION,
+    PLATFORMS: process.env.PLATFORMS ?? `amd64`,
+    APP_ROOT_FILE_PATH: process.env.APP_ROOT_FILE_PATH!,
 };
 
 for (const cdkRegion of cdkRegions) {
     for (const environment of deployEnvironments) {
+        const repositoryName = `${envTypes.ECR_REPOSITORY_NAME}-${environment}`;
+        const appName = envTypes.APP_NAME;
+        const imageVersion = envTypes.IMAGE_VERSION ?? LATEST_IMAGE_VERSION;
+
         new QdrantDockerImageEcrDeploymentCdkStack(app, `QdrantDockerImageEcrDeploymentCdkStack-${cdkRegion}-${environment}`, {
             env: {
                 account,
@@ -49,9 +55,9 @@ for (const cdkRegion of cdkRegions) {
             tags: {
                 environment,
             },
-            repositoryName: `${envTypes.ECR_REPOSITORY_NAME}-${environment}`,
-            appName: envTypes.APP_NAME,
-            imageVersion: envTypes.IMAGE_VERSION ?? LATEST_IMAGE_VERSION,
+            repositoryName,
+            appName,
+            imageVersion,
             environment: environment
         });
 
@@ -63,11 +69,12 @@ for (const cdkRegion of cdkRegions) {
             tags: {
                 environment,
             },
-            repositoryName: `${envTypes.ECR_REPOSITORY_NAME}-${environment}`,
-            appName: envTypes.APP_NAME,
-            imageVersion: envTypes.IMAGE_VERSION ?? LATEST_IMAGE_VERSION,
+            repositoryName,
+            appName,
+            imageVersion,
             environment: environment,
             platformString: `amd64`,
+            appRootFilePath: envTypes.APP_ROOT_FILE_PATH,
         });
     }
 }

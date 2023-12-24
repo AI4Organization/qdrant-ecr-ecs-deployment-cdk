@@ -14,9 +14,12 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
 
         const ecrRepositoryName = props.repositoryName;
         console.log(`ecrRepositoryName: ${ecrRepositoryName}`);
-        // const ecrRepository = ecr.Repository.fromRepositoryName(this, `${props.appName}-${props.environment}-${props.platformString}-ERCRepository`, ecrRepositoryName);
-        // const ecsContainerImage = ecs.ContainerImage.fromEcrRepository(ecrRepository, props.imageVersion);
-        const ecsContainerImage = ecs.ContainerImage.fromRegistry(`qdrant/qdrant:v${props.imageVersion}`);
+
+        const imageVersion = props.imageVersion;
+        console.log(`imageVersion: ${imageVersion}`);
+
+        const ecrRepository = ecr.Repository.fromRepositoryName(this, `${props.appName}-${props.environment}-${props.platformString}-ERCRepository`, ecrRepositoryName);
+        const ecsContainerImage = ecs.ContainerImage.fromEcrRepository(ecrRepository, imageVersion);
 
         // define a cluster with spot instances, linux type
         const cluster = new ecs.Cluster(this, `${props.appName}-${props.environment}-${props.platformString}-Cluster`, {

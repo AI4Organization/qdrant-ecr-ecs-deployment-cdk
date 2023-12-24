@@ -1,5 +1,6 @@
 import { QdrantDockerImageEcrDeploymentCdkStackProps } from './QdrantDockerImageEcrDeploymentCdkStackProps';
 
 export interface QdrantDockerImageEcsDeploymentCdkStackProps extends QdrantDockerImageEcrDeploymentCdkStackProps {
-    platformString: string;
+    readonly platformString: string;
+    readonly appRootFilePath: string;
 }
