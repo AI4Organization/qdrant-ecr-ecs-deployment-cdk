@@ -19,15 +19,15 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         const ecsContainerImage = ecs.ContainerImage.fromRegistry(`qdrant/qdrant:v${imageVersion}`);
 
         // define a cluster with spot instances, linux type
-        const ecsCluster = new ecs.Cluster(this, `${props.appName}-${props.environment}-${props.platformString}-Cluster`, {
-            clusterName: `${props.appName}-${props.environment}-${props.platformString}-Cluster`,
+        const ecsCluster = new ecs.Cluster(this, `${props.environment}-${props.platformString}-Cluster`, {
+            clusterName: `${props.environment}-${props.platformString}-Cluster`,
             vpc: qdrantVpc,
             containerInsights: true,
         });
 
         // define a security group for EFS
-        const qdrantEfsSG = new ec2.SecurityGroup(this, `${props.appName}-${props.environment}-${props.platformString}-EFS-SG`, {
-            securityGroupName: `${props.appName}-${props.environment}-${props.platformString}-EFS-SG`,
+        const qdrantEfsSG = new ec2.SecurityGroup(this, `${props.environment}-${props.platformString}-EFS-SG`, {
+            securityGroupName: `${props.environment}-${props.platformString}-EFS-SG`,
             vpc: qdrantVpc,
         });
 
@@ -37,7 +37,7 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         );
 
         // create Fargate Task Definition with EFS volume
-        const fargateTaskDefinition = new ecs.FargateTaskDefinition(this, `${props.appName}-${props.environment}-${props.platformString}-TaskDef`, {
+        const fargateTaskDefinition = new ecs.FargateTaskDefinition(this, `${props.environment}-${props.platformString}-TaskDef`, {
             memoryLimitMiB: 2048,
             cpu: 1024,
             ephemeralStorageGiB: 40,
@@ -48,9 +48,9 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         });
 
         // define a container with the image
-        const qdrantContainer = fargateTaskDefinition.addContainer(`${props.appName}-${props.environment}-${props.platformString}-QdrantContainer`, {
+        const qdrantContainer = fargateTaskDefinition.addContainer(`${props.environment}-${props.platformString}-QdrantContainer`, {
             image: ecsContainerImage,
-            logging: ecs.LogDrivers.awsLogs({ streamPrefix: `${props.appName}-${props.environment}-${props.platformString}-QdrantService` }),
+            logging: ecs.LogDrivers.awsLogs({ streamPrefix: `${props.environment}-${props.platformString}-QdrantService` }),
         });
 
         // add port mapping
@@ -60,8 +60,8 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         });
 
         // create an EFS File System
-        const efsFileSystem = new efs.FileSystem(this, `${props.appName}-${props.environment}-${props.platformString}-QdrantServiceEfsFileSystem`, {
-            fileSystemName: `${props.appName}-${props.environment}-${props.platformString}-QdrantServiceEfsFileSystem`,
+        const efsFileSystem = new efs.FileSystem(this, `${props.environment}-${props.platformString}-QdrantServiceEfsFileSystem`, {
+            fileSystemName: `${props.environment}-${props.platformString}-QdrantServiceEfsFileSystem`,
             vpc: qdrantVpc,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             securityGroup: qdrantEfsSG,
@@ -89,7 +89,7 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
             readOnly: false, // Allow the container to write to the EFS volume.
         });
 
-        const fargateService = new ApplicationLoadBalancedCodeDeployedFargateService(this, `${props.appName}-${props.environment}-${props.platformString}-FargateService`, {
+        const fargateService = new ApplicationLoadBalancedCodeDeployedFargateService(this, `${props.environment}-${props.platformString}-FargateService`, {
             cluster: ecsCluster,
             taskDefinition: fargateTaskDefinition,
             desiredCount: 1,
@@ -100,15 +100,15 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         });
 
         // print out fargateService dns name
-        new cdk.CfnOutput(this, `${props.appName}-${props.environment}-${props.platformString}-FargateServiceDns`, {
+        new cdk.CfnOutput(this, `${props.environment}-${props.platformString}-FargateServiceDns`, {
             value: fargateService.loadBalancer.loadBalancerDnsName,
-            exportName: `${props.appName}-${props.environment}-${props.platformString}-FargateServiceDns`,
+            exportName: `${props.environment}-${props.platformString}-FargateServiceDns`,
         });
 
         // print out fargateService service url
-        new cdk.CfnOutput(this, `${props.appName}-${props.environment}-${props.platformString}-FargateServiceUrl`, {
+        new cdk.CfnOutput(this, `${props.environment}-${props.platformString}-FargateServiceUrl`, {
             value: `http://${fargateService.loadBalancer.loadBalancerDnsName}:${props.vectorDatabasePort}`,
-            exportName: `${props.appName}-${props.environment}-${props.platformString}-FargateServiceUrl`,
+            exportName: `${props.environment}-${props.platformString}-FargateServiceUrl`,
         });
     }
 }

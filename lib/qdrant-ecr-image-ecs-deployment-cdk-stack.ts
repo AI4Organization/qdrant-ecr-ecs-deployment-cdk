@@ -18,12 +18,12 @@ export class QdrantEcrImageEcsDeploymentCdkStack extends cdk.Stack {
         const imageVersion = props.imageVersion;
         console.log(`imageVersion: ${imageVersion}`);
 
-        const ecrRepository = ecr.Repository.fromRepositoryName(this, `${props.appName}-${props.environment}-${props.platformString}-ERCRepository`, ecrRepositoryName);
+        const ecrRepository = ecr.Repository.fromRepositoryName(this, `${props.environment}-${props.platformString}-ERCRepository`, ecrRepositoryName);
         const ecsContainerImage = ecs.ContainerImage.fromEcrRepository(ecrRepository, imageVersion);
 
         // define a cluster with spot instances, linux type
-        const cluster = new ecs.Cluster(this, `${props.appName}-${props.environment}-${props.platformString}-Cluster`, {
-            clusterName: `${props.appName}-${props.environment}-${props.platformString}-Cluster`,
+        const cluster = new ecs.Cluster(this, `${props.environment}-${props.platformString}-Cluster`, {
+            clusterName: `${props.environment}-${props.platformString}-Cluster`,
             vpc: qrantVpc,
             containerInsights: true,
         });
@@ -31,19 +31,19 @@ export class QdrantEcrImageEcsDeploymentCdkStack extends cdk.Stack {
         // Create Task Definition
         const backendTaskDefinition = new ecs.FargateTaskDefinition(
             this,
-            `${props.appName}-${props.environment}-${props.platformString}-TaskDefinition`,
+            `${props.environment}-${props.platformString}-TaskDefinition`,
         );
 
-        const fargateContainer = backendTaskDefinition.addContainer(`${props.appName}-${props.environment}-${props.platformString}-Container`, {
+        const fargateContainer = backendTaskDefinition.addContainer(`${props.environment}-${props.platformString}-Container`, {
             image: ecsContainerImage,
-            containerName: `${props.appName}-${props.environment}-${props.platformString}-Container`,
+            containerName: `${props.environment}-${props.platformString}-Container`,
         });
         fargateContainer.addPortMappings({
             containerPort: 6333,
             protocol: ecs.Protocol.TCP,
         });
 
-        const fargateService = new ApplicationLoadBalancedCodeDeployedFargateService(this, `${props.appName}-${props.environment}-${props.platformString}-FargateService`, {
+        const fargateService = new ApplicationLoadBalancedCodeDeployedFargateService(this, `${props.environment}-${props.platformString}-FargateService`, {
             cluster,
             taskDefinition: backendTaskDefinition,
             desiredCount: 1,
@@ -59,9 +59,9 @@ export class QdrantEcrImageEcsDeploymentCdkStack extends cdk.Stack {
         });
 
         // print out fargateService dns name
-        new cdk.CfnOutput(this, `${props.appName}-${props.environment}-${props.platformString}-FargateServiceDns`, {
+        new cdk.CfnOutput(this, `${props.environment}-${props.platformString}-FargateServiceDns`, {
             value: fargateService.loadBalancer.loadBalancerDnsName,
-            exportName: `${props.appName}-${props.environment}-${props.platformString}-FargateServiceDns`,
+            exportName: `${props.environment}-${props.platformString}-FargateServiceDns`,
         });
     }
 }
