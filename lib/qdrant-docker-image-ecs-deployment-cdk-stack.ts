@@ -3,6 +3,7 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import { Construct } from 'constructs';
 import * as efs from 'aws-cdk-lib/aws-efs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { ApplicationLoadBalancedCodeDeployedFargateService } from '@cdklabs/cdk-ecs-codedeploy';
 import { QdrantDockerImageEcsDeploymentCdkStackProps } from './QdrantDockerImageEcsDeploymentCdkStackProps';
 import { createVPC } from './qdrant-vpc-deployment';
@@ -36,6 +37,22 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
             ec2.Port.tcp(2049) // Enable NFS service within security group
         );
 
+        // create an EFS File System
+        const efsFileSystem = new efs.FileSystem(this, `${props.environment}-${props.platformString}-QdrantServiceEfsFileSystem`, {
+            fileSystemName: `${props.environment}-${props.platformString}-QdrantServiceEfsFileSystem`,
+            vpc: qdrantVpc,
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            securityGroup: qdrantEfsSG, // Ensure this security group allows NFS traffic from the ECS tasks
+            vpcSubnets: {
+                subnets: qdrantVpc.privateSubnets,
+            },
+            encrypted: true, // Enable encryption at rest
+            performanceMode: efs.PerformanceMode.MAX_IO, // For AI application, HCP application, Analytics application, and media processing workflows
+            allowAnonymousAccess: false, // Disable anonymous access
+            throughputMode: efs.ThroughputMode.BURSTING,
+            lifecyclePolicy: efs.LifecyclePolicy.AFTER_30_DAYS, // After 2 weeks, if a file is not accessed for given days, it will move to EFS Infrequent Access.
+        });
+
         // create Fargate Task Definition with EFS volume
         const fargateTaskDefinition = new ecs.FargateTaskDefinition(this, `${props.environment}-${props.platformString}-TaskDef`, {
             memoryLimitMiB: 2048,
@@ -44,7 +61,32 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
             runtimePlatform: {
                 cpuArchitecture: props.platformString === `arm` ? ecs.CpuArchitecture.ARM64 : ecs.CpuArchitecture.X86_64,
                 operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
-            }
+            },
+            executionRole: new iam.Role(this, `${props.environment}-${props.platformString}-TaskExecutionRole`, {
+                assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+                managedPolicies: [
+                    iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy'),
+                ],
+                roleName: `${props.environment}-${props.platformString}-TaskExecutionRole`,
+                inlinePolicies: {
+                    efsAccess: new cdk.aws_iam.PolicyDocument({
+                        statements: [
+                            new iam.PolicyStatement({
+                                effect: iam.Effect.ALLOW,
+                                actions: [
+                                    'elasticfilesystem:ClientMount',
+                                    'elasticfilesystem:ClientWrite',
+                                    'elasticfilesystem:DescribeMountTargets',
+                                    'elasticfilesystem:ClientRootAccess',
+                                    'elasterfilesystem:ClientRead',
+                                    'elasticfilesystem:DescribeFileSystems',
+                                ],
+                                resources: [efsFileSystem.fileSystemArn],
+                            })
+                        ],
+                    }),
+                }
+            }),
         });
 
         // define a container with the image
@@ -57,19 +99,6 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         qdrantContainer.addPortMappings({
             containerPort: props.vectorDatabasePort,
             protocol: ecs.Protocol.TCP
-        });
-
-        // create an EFS File System
-        const efsFileSystem = new efs.FileSystem(this, `${props.environment}-${props.platformString}-QdrantServiceEfsFileSystem`, {
-            fileSystemName: `${props.environment}-${props.platformString}-QdrantServiceEfsFileSystem`,
-            vpc: qdrantVpc,
-            removalPolicy: cdk.RemovalPolicy.DESTROY,
-            securityGroup: qdrantEfsSG,
-            encrypted: true, // Enable encryption at rest
-            performanceMode: efs.PerformanceMode.MAX_IO, // For AI application, HCP application, Analytics application, and media processing workflows
-            allowAnonymousAccess: false, // Disable anonymous access
-            throughputMode: efs.ThroughputMode.BURSTING,
-            lifecyclePolicy: efs.LifecyclePolicy.AFTER_14_DAYS, // After 2 weeks, if a file is not accessed for given days, it will move to EFS Infrequent Access.
         });
 
         const efsVolumeName = `QdrantEfsVolume`;
@@ -93,10 +122,12 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
             cluster: ecsCluster,
             taskDefinition: fargateTaskDefinition,
             desiredCount: 1,
-            publicLoadBalancer: true,
-            openListener: true,
+            publicLoadBalancer: false,
             platformVersion: ecs.FargatePlatformVersion.VERSION1_4,
             securityGroups: [qdrantEfsSG],
+            taskSubnets: {
+                subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+            },
         });
 
         // print out fargateService dns name
