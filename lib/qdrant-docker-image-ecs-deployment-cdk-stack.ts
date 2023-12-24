@@ -4,10 +4,13 @@ import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
 import { ApplicationLoadBalancedCodeDeployedFargateService } from '@cdklabs/cdk-ecs-codedeploy';
 import { QdrantDockerImageEcsDeploymentCdkStackProps } from './QdrantDockerImageEcsDeploymentCdkStackProps';
+import { createVPC } from './qdrant-vpc-deployment';
 
 export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: QdrantDockerImageEcsDeploymentCdkStackProps) {
         super(scope, id, props);
+
+        const qrantVpc = createVPC(this, props);
 
         const ecrRepositoryName = props.repositoryName;
         console.log(`ecrRepositoryName: ${ecrRepositoryName}`);
@@ -18,6 +21,8 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         // define a cluster with spot instances, linux type
         const cluster = new ecs.Cluster(this, `${props.appName}-${props.environment}-${props.platformString}-Cluster`, {
             clusterName: `${props.appName}-${props.environment}-${props.platformString}-Cluster`,
+            vpc: qrantVpc,
+            containerInsights: true,
         });
 
         // Create Task Definition
