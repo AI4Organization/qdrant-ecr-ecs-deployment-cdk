@@ -6,16 +6,20 @@ import { ApplicationLoadBalancedCodeDeployedFargateService } from '@cdklabs/cdk-
 import { QdrantDockerImageEcsDeploymentCdkStackProps } from './QdrantDockerImageEcsDeploymentCdkStackProps';
 import { createVPC } from './qdrant-vpc-deployment';
 
-export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
+export class QdrantEcrImageEcsDeploymentCdkStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: QdrantDockerImageEcsDeploymentCdkStackProps) {
         super(scope, id, props);
 
         const qrantVpc = createVPC(this, props);
 
+        const ecrRepositoryName = props.repositoryName;
+        console.log(`ecrRepositoryName: ${ecrRepositoryName}`);
+
         const imageVersion = props.imageVersion;
         console.log(`imageVersion: ${imageVersion}`);
 
-        const ecsContainerImage = ecs.ContainerImage.fromRegistry(`qdrant/qdrant:v${imageVersion}`);
+        const ecrRepository = ecr.Repository.fromRepositoryName(this, `${props.appName}-${props.environment}-${props.platformString}-ERCRepository`, ecrRepositoryName);
+        const ecsContainerImage = ecs.ContainerImage.fromEcrRepository(ecrRepository, imageVersion);
 
         // define a cluster with spot instances, linux type
         const cluster = new ecs.Cluster(this, `${props.appName}-${props.environment}-${props.platformString}-Cluster`, {
