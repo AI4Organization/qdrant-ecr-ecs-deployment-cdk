@@ -1,6 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
 import { ApplicationLoadBalancedCodeDeployedFargateService } from '@cdklabs/cdk-ecs-codedeploy';
 import { QdrantDockerImageEcsDeploymentCdkStackProps } from './QdrantDockerImageEcsDeploymentCdkStackProps';
@@ -24,24 +23,13 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
             containerInsights: true,
         });
 
-        // Create Task Definition
-        const backendTaskDefinition = new ecs.FargateTaskDefinition(
-            this,
-            `${props.appName}-${props.environment}-${props.platformString}-TaskDefinition`,
-        );
-
-        const fargateContainer = backendTaskDefinition.addContainer(`${props.appName}-${props.environment}-${props.platformString}-Container`, {
-            image: ecsContainerImage,
-            containerName: `${props.appName}-${props.environment}-${props.platformString}-Container`,
-        });
-        fargateContainer.addPortMappings({
-            containerPort: 6333,
-            protocol: ecs.Protocol.TCP,
-        });
-
         const fargateService = new ApplicationLoadBalancedCodeDeployedFargateService(this, `${props.appName}-${props.environment}-${props.platformString}-FargateService`, {
             cluster,
-            taskDefinition: backendTaskDefinition,
+            taskImageOptions: {
+                image: ecsContainerImage,
+                containerName: `${props.appName}-${props.environment}-${props.platformString}-Container`,
+                containerPort: props.vectorDatabasePort,
+            },
             desiredCount: 1,
             cpu: 2048,
             memoryLimitMiB: 4096,

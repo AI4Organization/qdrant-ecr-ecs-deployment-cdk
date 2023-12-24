@@ -8,5 +8,6 @@ declare module NodeJS {
         PLATFORMS: string;
         EFS_ROOT_FILE_PATH: string;
         APP_ROOT_FILE_PATH: string;
+        PORT: string;
     }
 }
