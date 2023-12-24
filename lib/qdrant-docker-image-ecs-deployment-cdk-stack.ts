@@ -19,7 +19,7 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         const ecsContainerImage = ecs.ContainerImage.fromRegistry(`qdrant/qdrant:v${imageVersion}`);
 
         // define a cluster with spot instances, linux type
-        const cluster = new ecs.Cluster(this, `${props.appName}-${props.environment}-${props.platformString}-Cluster`, {
+        const ecsCluster = new ecs.Cluster(this, `${props.appName}-${props.environment}-${props.platformString}-Cluster`, {
             clusterName: `${props.appName}-${props.environment}-${props.platformString}-Cluster`,
             vpc: qdrantVpc,
             containerInsights: true,
@@ -90,7 +90,7 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         });
 
         const fargateService = new ApplicationLoadBalancedCodeDeployedFargateService(this, `${props.appName}-${props.environment}-${props.platformString}-FargateService`, {
-            cluster,
+            cluster: ecsCluster,
             taskDefinition: fargateTaskDefinition,
             desiredCount: 1,
             publicLoadBalancer: true,
