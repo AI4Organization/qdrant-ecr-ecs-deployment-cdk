@@ -72,7 +72,7 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
             lifecyclePolicy: efs.LifecyclePolicy.AFTER_14_DAYS, // After 2 weeks, if a file is not accessed for given days, it will move to EFS Infrequent Access.
         });
 
-        const efsVolumeName = `${props.appName}-${props.environment}-${props.platformString}-QdrantEfsVolume`;
+        const efsVolumeName = `QdrantEfsVolume`;
 
         // add EFS volume to the task definition
         fargateTaskDefinition.addVolume({
@@ -103,6 +103,12 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         new cdk.CfnOutput(this, `${props.appName}-${props.environment}-${props.platformString}-FargateServiceDns`, {
             value: fargateService.loadBalancer.loadBalancerDnsName,
             exportName: `${props.appName}-${props.environment}-${props.platformString}-FargateServiceDns`,
+        });
+
+        // print out fargateService service url
+        new cdk.CfnOutput(this, `${props.appName}-${props.environment}-${props.platformString}-FargateServiceUrl`, {
+            value: `http://${fargateService.loadBalancer.loadBalancerDnsName}:${props.vectorDatabasePort}`,
+            exportName: `${props.appName}-${props.environment}-${props.platformString}-FargateServiceUrl`,
         });
     }
 }
