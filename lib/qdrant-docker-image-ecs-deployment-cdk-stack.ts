@@ -11,9 +11,9 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
 
         const ecrRepositoryName = props.repositoryName;
         console.log(`ecrRepositoryName: ${ecrRepositoryName}`);
-        const ecrRepository = ecr.Repository.fromRepositoryName(this, `${props.appName}-${props.environment}-${props.platformString}-ERCRepository`, ecrRepositoryName);
+        // const ecrRepository = ecr.Repository.fromRepositoryName(this, `${props.appName}-${props.environment}-${props.platformString}-ERCRepository`, ecrRepositoryName);
         // const ecsContainerImage = ecs.ContainerImage.fromEcrRepository(ecrRepository, props.imageVersion);
-        const ecsContainerImage = ecs.ContainerImage.fromRegistry(`qdrant/qdrant:${props.imageVersion}`);
+        const ecsContainerImage = ecs.ContainerImage.fromRegistry(`qdrant/qdrant:v${props.imageVersion}`);
 
         // define a cluster with spot instances, linux type
         const cluster = new ecs.Cluster(this, `${props.appName}-${props.environment}-${props.platformString}-Cluster`, {
@@ -31,7 +31,7 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
             containerName: `${props.appName}-${props.environment}-${props.platformString}-Container`,
         });
         fargateContainer.addPortMappings({
-            containerPort: 80,
+            containerPort: 6333,
             protocol: ecs.Protocol.TCP,
         });
 
@@ -43,11 +43,11 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
             memoryLimitMiB: 4096,
             publicLoadBalancer: true,
             openListener: true,
-            platformVersion: ecs.FargatePlatformVersion.LATEST,
+            platformVersion: ecs.FargatePlatformVersion.VERSION1_4,
             runtimePlatform: {
                 cpuArchitecture: props.platformString === `arm` ? ecs.CpuArchitecture.ARM64 : ecs.CpuArchitecture.X86_64,
                 operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
-            },
+            }
         });
 
         // print out fargateService dns name
