@@ -68,7 +68,7 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
             encrypted: true, // Enable encryption at rest
             performanceMode: efs.PerformanceMode.MAX_IO, // For AI application, HCP application, Analytics application, and media processing workflows
             allowAnonymousAccess: false, // Disable anonymous access
-            throughputMode: efs.ThroughputMode.ELASTIC, // Balance of latency and cost
+            throughputMode: efs.ThroughputMode.BURSTING,
             lifecyclePolicy: efs.LifecyclePolicy.AFTER_14_DAYS, // After 2 weeks, if a file is not accessed for given days, it will move to EFS Infrequent Access.
         });
 
@@ -85,7 +85,7 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         // mount EFS to the container
         qdrantContainer.addMountPoints({
             sourceVolume: efsVolumeName, // The name of the volume to mount. Must be a volume name referenced in the name parameter of task definition volume.
-            containerPath: props.appRootFilePath,
+            containerPath: props.appRootFilePath, // The path on the container to mount the host volume at.
             readOnly: false, // Allow the container to write to the EFS volume.
         });
 
