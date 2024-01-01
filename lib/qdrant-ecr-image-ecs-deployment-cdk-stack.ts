@@ -32,9 +32,11 @@ export class QdrantEcrImageEcsDeploymentCdkStack extends cdk.Stack {
         });
 
         // define a security group for EFS
-        const qdrantEfsSG = new ec2.SecurityGroup(this, `${props.environment}-${props.platformString}-${props.deployRegion}-EFS-SG`, {
-            securityGroupName: `${props.environment}-${props.platformString}-${props.deployRegion}-EFS-SG`,
+        const qdrantEfsSG = new ec2.SecurityGroup(this, `${props.environment}-${props.platformString}-${props.deployRegion}-qdrantEfsSG`, {
+            securityGroupName: `${props.environment}-${props.platformString}-${props.deployRegion}-qdrantEfsSG`,
             vpc: qdrantVpc,
+            allowAllOutbound: true,
+            allowAllIpv6Outbound: true,
         });
 
         qdrantEfsSG.addIngressRule(
@@ -44,10 +46,20 @@ export class QdrantEcrImageEcsDeploymentCdkStack extends cdk.Stack {
             'Allow NFS traffic from the ECS tasks.'
         );
 
-        qdrantEfsSG.addIngressRule(
+        const qdrantDbSG = new ec2.SecurityGroup(this, `${props.environment}-${props.platformString}-${props.deployRegion}-qdrantDbSG`, {
+            securityGroupName: `${props.environment}-${props.platformString}-${props.deployRegion}-qdrantDbSG`,
+            vpc: qdrantVpc,
+            allowAllOutbound: true,
+            allowAllIpv6Outbound: true,
+        });
+
+        const vectorDatabasePort = props.vectorDatabasePort;
+        console.log(`vectorDatabasePort: ${vectorDatabasePort}`);
+
+        qdrantDbSG.addIngressRule(
             // ec2.Peer.ipv4(qdrantVpc.vpcCidrBlock),
             qdrantEfsSG,
-            ec2.Port.tcp(props.vectorDatabasePort),
+            ec2.Port.tcp(vectorDatabasePort),
             'Allow Qdrant traffic from the VPC.'
         );
 
@@ -148,7 +160,7 @@ export class QdrantEcrImageEcsDeploymentCdkStack extends cdk.Stack {
 
         // add port mapping
         qdrantContainer.addPortMappings({
-            containerPort: props.vectorDatabasePort, // The port on the container to which the listener forwards traffic
+            containerPort: vectorDatabasePort, // The port on the container to which the listener forwards traffic
             protocol: ecs.Protocol.TCP
         });
 
@@ -175,7 +187,7 @@ export class QdrantEcrImageEcsDeploymentCdkStack extends cdk.Stack {
             desiredCount: 1,
             publicLoadBalancer: true,
             platformVersion: ecs.FargatePlatformVersion.VERSION1_4,
-            securityGroups: [qdrantEfsSG],
+            securityGroups: [qdrantEfsSG, qdrantDbSG], // might be needed to define port for qdrant vector sg
             listenerPort: 80, // The port on which the listener listens for incoming traffic
         });
 
