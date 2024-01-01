@@ -14,6 +14,10 @@ export class QdrantDockerImageEcrDeploymentCdkStack extends cdk.Stack {
             enableKeyRotation: true,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             enabled: true,
+            description: `KMS key for ${props.appName}-${props.environment}-ECRRepository`,
+            keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
+            keySpec: kms.KeySpec.SYMMETRIC_DEFAULT,
+            alias: `${props.appName}-${props.environment}-ECRRepositoryKmsKey`,
         });
 
         const ecrRepository = new ecr.Repository(this, `${props.appName}-${props.environment}-DockerImageEcrRepository`, {
