@@ -138,6 +138,7 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         const qdrantContainer = fargateTaskDefinition.addContainer(`${props.environment}-${props.platformString}-QdrantContainer`, {
             image: ecsContainerImage,
             logging: ecs.LogDrivers.awsLogs({ streamPrefix: `${props.environment}-${props.platformString}-QdrantService` }),
+            containerName: `${props.environment}-${props.platformString}-QdrantContainer`,
         });
 
         // add port mapping
