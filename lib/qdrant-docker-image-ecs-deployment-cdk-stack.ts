@@ -17,7 +17,7 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         const imageVersion = props.imageVersion;
         console.log(`imageVersion: ${imageVersion}`);
 
-        const ecsContainerImage = ecs.ContainerImage.fromRegistry(`qdrant/qdrant:v${imageVersion}`);
+        const ecsContainerImage = ecs.ContainerImage.fromRegistry(`qdrant/qdrant:${imageVersion}`);
 
         // define a cluster with spot instances, linux type
         const ecsCluster = new ecs.Cluster(this, `${props.environment}-${props.platformString}-Cluster`, {
@@ -33,8 +33,17 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         });
 
         qdrantEfsSG.addIngressRule(
+            // ec2.Peer.ipv4(qdrantVpc.vpcCidrBlock)
             qdrantEfsSG,
-            ec2.Port.tcp(2049) // Enable NFS service within security group
+            ec2.Port.tcp(2049),
+            'Allow NFS traffic from the ECS tasks.'
+        );
+
+        qdrantEfsSG.addIngressRule(
+            // ec2.Peer.ipv4(qdrantVpc.vpcCidrBlock),
+            qdrantEfsSG,
+            ec2.Port.tcp(props.vectorDatabasePort),
+            'Allow Qdrant traffic from the VPC.'
         );
 
         // create an EFS File System
@@ -43,15 +52,25 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
             vpc: qdrantVpc,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             securityGroup: qdrantEfsSG, // Ensure this security group allows NFS traffic from the ECS tasks
-            vpcSubnets: {
-                subnets: qdrantVpc.privateSubnets,
-            },
             encrypted: true, // Enable encryption at rest
             performanceMode: efs.PerformanceMode.MAX_IO, // For AI application, HCP application, Analytics application, and media processing workflows
             allowAnonymousAccess: false, // Disable anonymous access
             throughputMode: efs.ThroughputMode.BURSTING,
             lifecyclePolicy: efs.LifecyclePolicy.AFTER_30_DAYS, // After 2 weeks, if a file is not accessed for given days, it will move to EFS Infrequent Access.
         });
+
+        // add EFS access policy
+        efsFileSystem.addToResourcePolicy(
+            new iam.PolicyStatement({
+                actions: ['elasticfilesystem:ClientMount'],
+                principals: [new iam.AnyPrincipal()],
+                conditions: {
+                    Bool: {
+                        'elasticfilesystem:AccessedViaMountTarget': 'true'
+                    }
+                },
+            }),
+        );
 
         // create Fargate Task Definition with EFS volume
         const fargateTaskDefinition = new ecs.FargateTaskDefinition(this, `${props.environment}-${props.platformString}-TaskDef`, {
@@ -87,6 +106,32 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
                     }),
                 }
             }),
+            taskRole: new iam.Role(this, `${props.environment}-${props.platformString}-TaskRole`, {
+                // define a role for the task to access EFS with mount, read, write permissions
+                assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+                managedPolicies: [
+                    iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy'),
+                ],
+                roleName: `${props.environment}-${props.platformString}-TaskRole`,
+                inlinePolicies: {
+                    efsAccess: new iam.PolicyDocument({
+                        statements: [
+                            new iam.PolicyStatement({
+                                effect: iam.Effect.ALLOW,
+                                actions: [
+                                    'elasticfilesystem:ClientMount',
+                                    'elasticfilesystem:ClientWrite',
+                                    'elasticfilesystem:DescribeMountTargets',
+                                    'elasticfilesystem:ClientRootAccess',
+                                    'elasticfilesystem:ClientRead',
+                                    'elasticfilesystem:DescribeFileSystems',
+                                ],
+                                resources: [efsFileSystem.fileSystemArn],
+                            }),
+                        ],
+                    }),
+                },
+            }),
         });
 
         // define a container with the image
@@ -97,11 +142,11 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
 
         // add port mapping
         qdrantContainer.addPortMappings({
-            containerPort: props.vectorDatabasePort,
+            containerPort: props.vectorDatabasePort, // The port on the container to which the listener forwards traffic
             protocol: ecs.Protocol.TCP
         });
 
-        const efsVolumeName = `QdrantEfsVolume`;
+        const efsVolumeName = props.appRootFilePath;
 
         // add EFS volume to the task definition
         fargateTaskDefinition.addVolume({
@@ -114,31 +159,36 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         // mount EFS to the container
         qdrantContainer.addMountPoints({
             sourceVolume: efsVolumeName, // The name of the volume to mount. Must be a volume name referenced in the name parameter of task definition volume.
-            containerPath: props.appRootFilePath, // The path on the container to mount the host volume at.
+            containerPath: `/${efsVolumeName}`, // The path on the container to mount the host volume at.
             readOnly: false, // Allow the container to write to the EFS volume.
         });
 
-        const fargateService = new ApplicationLoadBalancedCodeDeployedFargateService(this, `${props.environment}-${props.platformString}-FargateService`, {
+        const albFargateService = new ApplicationLoadBalancedCodeDeployedFargateService(this, `${props.environment}-${props.platformString}-FargateService`, {
             cluster: ecsCluster,
             taskDefinition: fargateTaskDefinition,
             desiredCount: 1,
-            publicLoadBalancer: false,
+            publicLoadBalancer: true,
             platformVersion: ecs.FargatePlatformVersion.VERSION1_4,
             securityGroups: [qdrantEfsSG],
-            taskSubnets: {
-                subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-            },
+            listenerPort: 80, // The port on which the listener listens for incoming traffic
         });
+
+        // set deregistration delay to 30 seconds
+        albFargateService.targetGroup.setAttribute('deregistration_delay.timeout_seconds', '30');
+
+        // allow access to EFS from Fargate ECS
+        efsFileSystem.grantRootAccess(albFargateService.taskDefinition.taskRole.grantPrincipal);
+        efsFileSystem.connections.allowDefaultPortFrom(albFargateService.service.connections);
 
         // print out fargateService dns name
         new cdk.CfnOutput(this, `${props.environment}-${props.platformString}-FargateServiceDns`, {
-            value: fargateService.loadBalancer.loadBalancerDnsName,
+            value: albFargateService.loadBalancer.loadBalancerDnsName,
             exportName: `${props.environment}-${props.platformString}-FargateServiceDns`,
         });
 
         // print out fargateService service url
         new cdk.CfnOutput(this, `${props.environment}-${props.platformString}-FargateServiceUrl`, {
-            value: `http://${fargateService.loadBalancer.loadBalancerDnsName}:${props.vectorDatabasePort}`,
+            value: `http://${albFargateService.loadBalancer.loadBalancerDnsName}`,
             exportName: `${props.environment}-${props.platformString}-FargateServiceUrl`,
         });
     }
