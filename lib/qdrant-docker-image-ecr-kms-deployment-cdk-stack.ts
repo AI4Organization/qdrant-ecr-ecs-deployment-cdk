@@ -6,7 +6,13 @@ import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { QdrantDockerImageEcrDeploymentCdkStackProps } from './QdrantDockerImageEcrDeploymentCdkStackProps';
 import { LATEST_IMAGE_VERSION } from '../bin/qdrant-docker-image-ecr-deployment-cdk';
 
-export class QdrantDockerImageEcrDeploymentCdkStack extends cdk.Stack {
+/**
+ * The `QdrantDockerImageEcrDeploymentCdkStack` class defines the infrastructure stack
+ * for deploying the Qdrant Docker image to an Amazon ECR repository.
+ * It sets up the ECR repository, handles the lifecycle of the Docker images,
+ * and manages the deployment of new image versions.
+ */
+export class QdrantDockerImageEcrKmsDeploymentCdkStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: QdrantDockerImageEcrDeploymentCdkStackProps) {
         super(scope, id, props);
 

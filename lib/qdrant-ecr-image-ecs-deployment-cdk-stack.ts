@@ -9,6 +9,12 @@ import { ApplicationLoadBalancedCodeDeployedFargateService } from '@cdklabs/cdk-
 import { QdrantDockerImageEcsDeploymentCdkStackProps } from './QdrantDockerImageEcsDeploymentCdkStackProps';
 import { createVPC } from './qdrant-vpc-deployment';
 
+/**
+ * The `QdrantEcrImageEcsDeploymentCdkStack` class defines the infrastructure stack
+ * for deploying the Qdrant Docker image to an Amazon ECS cluster.
+ * It sets up the necessary resources such as the ECS cluster, task definitions,
+ * and load balancer to run the Qdrant service in a scalable and secure manner.
+ */
 export class QdrantEcrImageEcsDeploymentCdkStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: QdrantDockerImageEcsDeploymentCdkStackProps) {
         super(scope, id, props);
