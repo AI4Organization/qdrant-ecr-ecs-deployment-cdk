@@ -181,6 +181,14 @@ export class QdrantDockerImageEcsDeploymentCdkStack extends cdk.Stack {
         efsFileSystem.grantRootAccess(albFargateService.taskDefinition.taskRole.grantPrincipal);
         efsFileSystem.connections.allowDefaultPortFrom(albFargateService.service.connections);
 
+        // setup AutoScaling policy
+        const scaling = albFargateService.service.autoScaleTaskCount({ maxCapacity: 2, minCapacity: 1 });
+        scaling.scaleOnCpuUtilization(`${props.appName}-${props.environment}-${props.platformString}-CpuScaling`, {
+            targetUtilizationPercent: 70,
+            scaleInCooldown: cdk.Duration.seconds(60),
+            scaleOutCooldown: cdk.Duration.seconds(60)
+        });
+
         // print out fargateService dns name
         new cdk.CfnOutput(this, `${props.environment}-${props.platformString}-FargateServiceDns`, {
             value: albFargateService.loadBalancer.loadBalancerDnsName,
