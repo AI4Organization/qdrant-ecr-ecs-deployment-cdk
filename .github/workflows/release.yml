@@ -92,6 +92,9 @@ jobs:
           ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
           APP_NAME: ${{ secrets.APP_NAME }}
           IMAGE_VERSION: ${{ secrets.IMAGE_VERSION }}
+          PLATFORMS: ${{ secrets.PLATFORMS }}
+          APP_ROOT_FILE_PATH: ${{ secrets.APP_ROOT_FILE_PATH }}
+          PORT: ${{ secrets.PORT }}
         run: npx cdk synth
         continue-on-error: false
 
@@ -102,6 +105,9 @@ jobs:
           ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
           APP_NAME: ${{ secrets.APP_NAME }}
           IMAGE_VERSION: ${{ secrets.IMAGE_VERSION }}
+          PLATFORMS: ${{ secrets.PLATFORMS }}
+          APP_ROOT_FILE_PATH: ${{ secrets.APP_ROOT_FILE_PATH }}
+          PORT: ${{ secrets.PORT }}
         run: npx cdk bootstrap
         continue-on-error: false
 
@@ -113,4 +119,7 @@ jobs:
           ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
           APP_NAME: ${{ secrets.APP_NAME }}
           IMAGE_VERSION: ${{ secrets.IMAGE_VERSION }}
+          PLATFORMS: ${{ secrets.PLATFORMS }}
+          APP_ROOT_FILE_PATH: ${{ secrets.APP_ROOT_FILE_PATH }}
+          PORT: ${{ secrets.PORT }}
         continue-on-error: false
