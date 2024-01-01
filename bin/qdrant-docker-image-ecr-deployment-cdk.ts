@@ -7,6 +7,7 @@ import { QdrantDockerImageEcrDeploymentCdkStack } from '../lib/qdrant-docker-ima
 import { IEnvTypes } from '../process-env-typed';
 import { QdrantDockerImageEcsDeploymentCdkStack } from '../lib/qdrant-docker-image-ecs-deployment-cdk-stack';
 import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
+import { QdrantEcrImageEcsDeploymentCdkStack } from '../lib/qdrant-ecr-image-ecs-deployment-cdk-stack';
 
 dotenv.config(); // Load environment variables from .env file
 const app = new cdk.App();
@@ -77,7 +78,8 @@ for (const cdkRegion of cdkRegions) {
                 repositoryName,
                 appName,
                 imageVersion,
-                environment: environment
+                environment: environment,
+                description: `Qdrant Vector Database ECR ${environment} ${platformString} ${cdkRegion}`,
             });
 
             new QdrantDockerImageEcsDeploymentCdkStack(app, `QdrantDockerImageEcsDeploymentCdkStack-${cdkRegion}-${environment}-${platformString}`, {
@@ -95,6 +97,27 @@ for (const cdkRegion of cdkRegions) {
                 platformString,
                 appRootFilePath: envTypes.APP_ROOT_FILE_PATH,
                 vectorDatabasePort: parseInt(process.env.PORT!),
+                deployRegion: cdkRegion,
+                description: `Qdrant Vector Database DockerHub ECS ${environment} ${platformString} ${cdkRegion}`,
+            });
+
+            new QdrantEcrImageEcsDeploymentCdkStack(app, `QdrantEcrImageEcsDeploymentCdkStack-${cdkRegion}-${environment}-${platformString}`, {
+                env: {
+                    account,
+                    region: cdkRegion,
+                },
+                tags: {
+                    environment,
+                },
+                repositoryName,
+                appName,
+                imageVersion,
+                environment: environment,
+                platformString,
+                appRootFilePath: envTypes.APP_ROOT_FILE_PATH,
+                vectorDatabasePort: parseInt(process.env.PORT!),
+                deployRegion: cdkRegion,
+                description: `Qdrant Vector Database ECR ECS ${environment} ${platformString} ${cdkRegion}`,
             });
         }
     }

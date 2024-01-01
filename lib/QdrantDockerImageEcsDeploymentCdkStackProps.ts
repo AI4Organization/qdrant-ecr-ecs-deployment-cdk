@@ -4,4 +4,5 @@ export interface QdrantDockerImageEcsDeploymentCdkStackProps extends QdrantDocke
     readonly platformString: string;
     readonly appRootFilePath: string;
     readonly vectorDatabasePort: number;
+    readonly deployRegion: string | undefined;
 }
